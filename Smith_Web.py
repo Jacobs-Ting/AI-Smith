@@ -5,6 +5,7 @@ import skrf as rf
 from scipy.optimize import minimize
 import plotly.graph_objects as go
 import tempfile
+from plotly.subplots import make_subplots
 
 # ==========================================
 # 🌟 Streamlit 頁面與全域暗黑設定
@@ -427,16 +428,38 @@ with tab2:
         
         gd = -np.diff(np.unwrap(phases)) / (2*np.pi*(freqs[1]-freqs[0])) * 1e9
         
-        fig2, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), dpi=100)
-        ax1.plot(freqs/1e9, gt_db_list, color=C_CAP, lw=2.5); ax1.set_title("Transducer Power Gain (dB)", color=FG_TEXT, fontsize=16)
-        ax1.axvline(fc/1e9, color=C_TARGET, linestyle='--'); ax1.grid(color='#555555')
-        
-        ax2.plot(freqs[1:]/1e9, gd, color=C_FINAL, lw=2.5); ax2.set_title("Group Delay (ns)", color=FG_TEXT, fontsize=16)
-        ax2.axvline(fc/1e9, color=C_TARGET, linestyle='--'); ax2.grid(color='#555555')
-        ax2.set_xlabel("Frequency (GHz)", color=FG_TEXT, fontsize=14)
-        
-        fig2.tight_layout()
-        st.pyplot(fig2)
+        # 🌟 升級為 Plotly 雙軸互動式圖表
+        fig2 = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                             subplot_titles=("Transducer Power Gain S21 (dB)", "Group Delay (ns)"),
+                             vertical_spacing=0.1)
+
+        # 繪製 S21 (包含 Hover 互動)
+        fig2.add_trace(go.Scatter(x=freqs/1e9, y=gt_db_list, mode='lines',
+                                  line=dict(color=C_CAP, width=2.5), name="S21",
+                                  hovertemplate="Freq: %{x:.3f} GHz<br>S21: %{y:.2f} dB<extra></extra>"),
+                       row=1, col=1)
+
+        # 繪製 Group Delay (包含 Hover 互動)
+        fig2.add_trace(go.Scatter(x=freqs[1:]/1e9, y=gd, mode='lines',
+                                  line=dict(color=C_FINAL, width=2.5), name="GD",
+                                  hovertemplate="Freq: %{x:.3f} GHz<br>Delay: %{y:.2f} ns<extra></extra>"),
+                       row=2, col=1)
+
+        # 標示中心頻率虛線
+        fig2.add_vline(x=fc/1e9, line_width=2, line_dash="dash", line_color=C_TARGET)
+
+        # 專業暗黑模式版面設定
+        fig2.update_layout(
+            paper_bgcolor=BG_MAIN, plot_bgcolor=BG_MAIN,
+            font=dict(color=FG_TEXT, size=14),
+            height=800, showlegend=False,
+            margin=dict(l=40, r=40, t=60, b=40)
+        )
+        fig2.update_xaxes(gridcolor='#444444', zerolinecolor='#555555')
+        fig2.update_yaxes(gridcolor='#444444', zerolinecolor='#555555')
+        fig2.update_xaxes(title_text="Frequency (GHz)", row=2, col=1)
+
+        st.plotly_chart(fig2, use_container_width=True)
 
 with tab3:
     st.markdown("### 🎲 蒙地卡羅良率分析 (Monte Carlo Yield Analysis)")
